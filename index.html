@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Board Tracker · PCM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FCFBF6;
+    --paper-shade:#F4F2EA;
+    --rule:#C3D3E4;
+    --margin:#B5433B;
+    --ink:#23241F;
+    --ink-soft:#5B5A52;
+    --phy:#2B4C7E;
+    --phy-soft:#E7ECF4;
+    --chem:#3B7A57;
+    --chem-soft:#E7F0E9;
+    --math:#B5541E;
+    --math-soft:#F5E9DE;
+    --good:#3B7A57;
+    --warn:#B5433B;
+    --radius-doc: 2px;
+    --radius-chip: 999px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper-shade);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:84px;
+  }
+  h1,h2,h3{font-family:'Source Serif 4', serif; margin:0; font-weight:600;}
+  .num{font-family:'Space Grotesk', sans-serif;}
+
+  /* ---- App shell ---- */
+  .sheet{
+    max-width:520px;
+    margin:0 auto;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0px, transparent 33px,
+        var(--rule) 33px, var(--rule) 34px
+      ),
+      var(--paper);
+    min-height:100vh;
+    position:relative;
+    border-left:1px solid var(--margin);
+    padding-left:20px;
+    box-shadow:0 0 40px rgba(0,0,0,0.06);
+  }
+
+  header.hero{
+    padding:26px 18px 18px 4px;
+    border-bottom:1px solid var(--rule);
+  }
+  .eyebrow-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12px; color:var(--ink-soft); letter-spacing:0.02em;
+  }
+  .hero h1{font-size:22px; line-height:1.25; margin-top:6px;}
+  .hero .sub{color:var(--ink-soft); font-size:13.5px; margin-top:4px;}
+
+  .countdown-row{
+    display:flex; gap:14px; margin-top:18px; align-items:flex-end;
+  }
+  .countdown-num{
+    font-size:52px; font-weight:700; line-height:0.9; color:var(--margin);
+  }
+  .countdown-label{font-size:13px; color:var(--ink-soft); padding-bottom:6px;}
+
+  .pace-card{
+    margin-top:16px; padding:12px 14px; background:var(--paper-shade);
+    border:1px solid var(--rule); border-radius:var(--radius-doc);
+    font-size:13.5px; line-height:1.5;
+  }
+  .pace-card b{font-family:'Space Grotesk'; }
+  .pace-on{color:var(--good);}
+  .pace-behind{color:var(--warn);}
+
+  /* ---- session timer ---- */
+  .session-card{
+    margin-top:14px; padding:14px; background:var(--ink); color:var(--paper);
+    border-radius:var(--radius-doc); transition:box-shadow .3s;
+  }
+  .session-card.pulse{box-shadow:0 0 0 3px var(--margin);}
+  .session-card .sc-label{font-size:11.5px; color:#C9C7BC; letter-spacing:0.02em;}
+  .session-card select{
+    background:#33342D; color:var(--paper); border:1px solid #4A4B41; margin-top:8px;
+  }
+  .session-card select:disabled{opacity:0.55;}
+  .sc-timer-row{display:flex; align-items:baseline; gap:10px; margin-top:10px;}
+  .sc-timer{font-family:'Space Grotesk'; font-size:38px; font-weight:600; letter-spacing:0.01em;}
+  .sc-status{font-size:11.5px; color:#C9C7BC;}
+  .sc-status.live{color:#8FD19E;}
+  .sc-status.paused{color:#E3B15E;}
+  .sc-btns{display:flex; gap:8px; margin-top:12px;}
+  .sc-btns button{flex:1; padding:11px 0; font-size:13px;}
+  .sc-btn-start{background:var(--good); border-color:var(--good); color:#fff;}
+  .sc-btn-pause{background:#E3B15E; border-color:#E3B15E; color:#23241F;}
+  .sc-btn-resume{background:var(--good); border-color:var(--good); color:#fff;}
+  .sc-btn-stop{background:var(--margin); border-color:var(--margin); color:#fff;}
+
+  .chart-block{margin-bottom:22px;}
+  .chart-block h3{font-size:13px; font-weight:500; color:var(--ink-soft); margin-bottom:8px; font-family:'IBM Plex Sans';}
+  .chart-block svg{width:100%; height:auto; display:block; overflow:visible;}
+  .chart-empty{font-size:12px; color:var(--ink-soft); padding:8px 0;}
+
+  section{padding:20px 18px 6px 4px; border-bottom:1px solid var(--rule);}
+  section h2{font-size:15px; text-transform:none; letter-spacing:0.01em; margin-bottom:12px;}
+
+  /* progress bars */
+  .prog-row{margin-bottom:14px;}
+  .prog-head{display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:5px;}
+  .prog-track{height:8px; background:var(--paper-shade); border:1px solid var(--rule); border-radius:var(--radius-chip); overflow:hidden;}
+  .prog-fill{height:100%; border-radius:var(--radius-chip);}
+  .prog-fill.phy{background:var(--phy);}
+  .prog-fill.chem{background:var(--chem);}
+  .prog-fill.math{background:var(--math);}
+
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px;}
+  .stat-box{border:1px solid var(--rule); padding:10px 12px; border-radius:var(--radius-doc);}
+  .stat-box .n{font-family:'Space Grotesk'; font-size:22px; font-weight:600;}
+  .stat-box .l{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+
+  /* today card */
+  .today-item{
+    display:flex; align-items:center; gap:12px;
+    padding:10px 0; border-bottom:1px dashed var(--rule);
+  }
+  .today-item:last-child{border-bottom:none;}
+  .dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .dot.phy{background:var(--phy);} .dot.chem{background:var(--chem);} .dot.math{background:var(--math);}
+  .dot.neutral{background:var(--ink-soft);}
+  .today-item .ti-name{font-size:14px; flex:1;}
+  .today-item .ti-sub{font-size:11px; color:var(--ink-soft);}
+
+  .logger{
+    margin-top:14px; padding:14px; background:var(--paper-shade);
+    border:1px solid var(--rule); border-radius:var(--radius-doc);
+  }
+  .logger .row{display:flex; gap:8px; margin-bottom:8px;}
+  select, input[type=number], input[type=date], input[type=time]{
+    font-family:'IBM Plex Sans'; font-size:13.5px; padding:9px 10px;
+    border:1px solid var(--rule); border-radius:var(--radius-doc); background:var(--paper);
+    color:var(--ink); width:100%;
+  }
+  button{
+    font-family:'IBM Plex Sans'; font-weight:600; font-size:13.5px;
+    padding:10px 14px; border-radius:var(--radius-doc); border:1px solid var(--ink);
+    background:var(--ink); color:var(--paper); cursor:pointer;
+  }
+  button.ghost{background:transparent; color:var(--ink); border:1px solid var(--rule);}
+  button.small{padding:6px 10px; font-size:12px;}
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:0.4; cursor:default;}
+
+  /* chapter list */
+  .chapter{
+    padding:12px 0; border-bottom:1px solid var(--rule);
+  }
+  .chapter:last-child{border-bottom:none;}
+  .ch-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .ch-name{font-size:14.5px; font-weight:500;}
+  .ch-hours{font-size:11.5px; color:var(--ink-soft); font-family:'Space Grotesk'; white-space:nowrap;}
+  .ch-stages{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .stage-btn{
+    font-size:11.5px; padding:5px 9px; border-radius:var(--radius-chip);
+    border:1px solid var(--rule); background:var(--paper); color:var(--ink-soft);
+    cursor:pointer; user-select:none;
+  }
+  .stage-btn.on{color:var(--paper); border-color:transparent;}
+  .stage-btn.on.phy{background:var(--phy);}
+  .stage-btn.on.chem{background:var(--chem);}
+  .stage-btn.on.math{background:var(--math);}
+  .ch-log{display:flex; align-items:center; gap:8px; margin-top:8px;}
+  .ch-log input{width:70px; padding:6px 8px; font-size:12.5px;}
+  .ch-log span{font-size:11.5px; color:var(--ink-soft);}
+
+  .subject-tab-bar{display:flex; gap:8px; padding:16px 18px 0 4px;}
+  .chip{
+    font-size:12.5px; padding:7px 13px; border-radius:var(--radius-chip);
+    border:1px solid var(--rule); color:var(--ink-soft); cursor:pointer;
+  }
+  .chip.active{color:#fff; border-color:transparent;}
+  .chip.active.phy{background:var(--phy);}
+  .chip.active.chem{background:var(--chem);}
+  .chip.active.math{background:var(--math);}
+
+  /* ---- subjects slider ---- */
+  .slider-track{
+    display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  .slider-track::-webkit-scrollbar{display:none;}
+  .slider-panel{
+    flex:0 0 100%; scroll-snap-align:start; padding:0 18px 6px 4px; min-width:100%;
+  }
+
+  /* ---- schedule / calendar ---- */
+  .date-strip{
+    display:flex; gap:8px; overflow-x:auto; padding:14px 18px 14px 4px;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  .date-strip::-webkit-scrollbar{display:none;}
+  .date-chip{
+    flex:0 0 auto; width:52px; text-align:center; padding:9px 0 8px;
+    border:1px solid var(--rule); border-radius:var(--radius-doc); cursor:pointer; background:var(--paper);
+  }
+  .date-chip .dow{font-size:10px; color:var(--ink-soft); text-transform:uppercase;}
+  .date-chip .dnum{font-family:'Space Grotesk'; font-size:17px; font-weight:600; margin-top:2px;}
+  .date-chip.today{border-color:var(--margin); border-width:2px;}
+  .date-chip.selected{background:var(--ink); color:var(--paper);}
+  .date-chip.selected .dow{color:#C9C7BC;}
+
+  .sched-stat{font-size:12.5px; color:var(--ink-soft); padding:0 18px 8px 4px;}
+  .sched-stat b{color:var(--ink); font-family:'Space Grotesk';}
+
+  .sched-day-head{display:flex; justify-content:space-between; align-items:baseline; padding:4px 18px 10px 4px;}
+  .sched-day-head h2{font-size:16px;}
+  .sched-day-head .actual{font-size:11.5px; color:var(--ink-soft);}
+
+  .block-row{
+    display:flex; gap:12px; padding:11px 18px 11px 4px; border-bottom:1px solid var(--rule);
+    align-items:flex-start;
+  }
+  .block-row:last-child{border-bottom:none;}
+  .block-row.readonly{opacity:0.72;}
+  .block-time{width:56px; flex-shrink:0; font-family:'Space Grotesk'; font-size:11.5px; color:var(--ink-soft); line-height:1.5; padding-top:2px;}
+  .block-body{flex:1;}
+  .block-label-row{display:flex; align-items:center; gap:8px;}
+  .block-name{font-size:14px; font-weight:500;}
+  .block-tag{font-size:10px; padding:2px 7px; border-radius:var(--radius-chip); background:var(--paper-shade); color:var(--ink-soft); border:1px solid var(--rule); white-space:nowrap;}
+  .block-sub{font-size:11.5px; color:var(--ink-soft); margin-top:3px;}
+  .block-row.type-break .block-name, .block-row.type-doubts .block-name{color:var(--ink-soft); font-style:italic;}
+  .block-row.type-mock .block-name{color:var(--margin);}
+  .log-tap{font-size:11px; padding:5px 10px; margin-top:6px;}
+
+  /* bottom nav */
+  nav.tabbar{
+    position:fixed; bottom:0; left:0; right:0;
+    max-width:520px; margin:0 auto;
+    background:var(--paper); border-top:1px solid var(--rule);
+    display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+    box-shadow:0 -6px 18px rgba(0,0,0,0.05);
+  }
+  nav.tabbar button.tab{
+    flex:1; background:none; border:none; color:var(--ink-soft);
+    font-family:'IBM Plex Sans'; font-size:11px; font-weight:500;
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0;
+  }
+  nav.tabbar button.tab .ico{width:18px; height:18px;}
+  nav.tabbar button.tab.active{color:var(--ink);}
+  nav.tabbar button.tab.active .ico circle,
+  nav.tabbar button.tab.active .ico path,
+  nav.tabbar button.tab.active .ico ellipse{stroke:var(--ink);}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .empty-note{font-size:12.5px; color:var(--ink-soft); padding:14px 0;}
+  .settings-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed var(--rule); font-size:13.5px; gap:10px;}
+  .settings-row:last-child{border-bottom:none;}
+  .settings-row .val{display:flex; gap:8px; align-items:center;}
+  .settings-row input{width:150px;}
+  .danger-btn{background:transparent; border:1px solid var(--warn); color:var(--warn); font-size:12.5px; padding:8px 12px;}
+  footer.credit{padding:22px 18px 30px 4px; font-size:11px; color:var(--ink-soft); line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <!-- HEADER (always visible) -->
+  <header class="hero">
+    <div class="eyebrow-row">
+      <span>CBSE Class 12 · Physics · Chemistry · Maths</span>
+      <span id="todayDate"></span>
+    </div>
+    <h1>Board prep tracker</h1>
+    <div class="sub" id="heroSub">Set your exam date in Settings to begin.</div>
+    <div class="countdown-row">
+      <div class="countdown-num num" id="daysLeftNum">–</div>
+      <div class="countdown-label">days to your<br>first board paper</div>
+    </div>
+    <div class="pace-card" id="paceCard"></div>
+
+    <!-- session timer -->
+    <div class="session-card" id="sessionCard">
+      <div class="sc-label">STUDY SESSION</div>
+      <select id="sessionChapterSelect"></select>
+      <div class="sc-timer-row">
+        <div class="sc-timer num" id="scTimerDisplay">00:00:00</div>
+        <div class="sc-status" id="scStatus">idle</div>
+      </div>
+      <div class="sc-btns" id="scBtns"></div>
+    </div>
+  </header>
+
+  <!-- DASHBOARD VIEW -->
+  <div class="view active" id="view-dashboard">
+    <section>
+      <h2>Syllabus completion</h2>
+      <div id="progressBars"></div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="n num" id="statHoursLogged">0</div><div class="l">hours logged total</div></div>
+        <div class="stat-box"><div class="n num" id="statStreak">0</div><div class="l">day streak</div></div>
+        <div class="stat-box"><div class="n num" id="statChaptersDone">0</div><div class="l">chapters fully done</div></div>
+        <div class="stat-box"><div class="n num" id="statHoursLeft">0</div><div class="l">hours of new syllabus left</div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Up next</h2>
+      <div id="upNextList"></div>
+      <div class="logger">
+        <div class="row">
+          <select id="logChapterSelect"></select>
+        </div>
+        <div class="row">
+          <input type="number" id="logHoursInput" placeholder="Hours studied" min="0" step="0.25" style="width:auto; flex:1;">
+          <button onclick="logHours()">Log manually</button>
+        </div>
+      </div>
+    </section>
+
+    <section style="border-bottom:none;">
+      <h2>Study time</h2>
+      <div class="chart-block">
+        <h3>Daily hours · last 14 days</h3>
+        <div id="dailyChart"></div>
+      </div>
+      <div class="chart-block">
+        <h3>Cumulative hours · all time</h3>
+        <div id="cumulativeChart"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SUBJECTS VIEW (single tab, sliding panels) -->
+  <div class="view" id="view-subjects">
+    <div class="subject-tab-bar" id="subjectTabBar"></div>
+    <section style="border-bottom:none; padding-left:0; padding-right:0;">
+      <div class="slider-track" id="subjectSlider">
+        <div class="slider-panel" id="panel-phy"></div>
+        <div class="slider-panel" id="panel-chem"></div>
+        <div class="slider-panel" id="panel-math"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SCHEDULE VIEW (calendar + today's blocks merged) -->
+  <div class="view" id="view-schedule">
+    <div class="date-strip" id="dateStrip"></div>
+    <div class="sched-stat" id="schedStat"></div>
+    <div class="sched-day-head">
+      <h2 id="schedDayTitle">Today</h2>
+      <span class="actual" id="schedActual"></span>
+    </div>
+    <div id="schedBlocks"></div>
+  </div>
+
+  <!-- SETTINGS VIEW -->
+  <div class="view" id="view-settings">
+    <section style="border-bottom:none;">
+      <h2>Exam & pace</h2>
+      <div class="settings-row">
+        <span>Board exam start date</span>
+        <div class="val"><input type="date" id="examDateInput"></div>
+      </div>
+      <div class="settings-row">
+        <span>Preparation start date</span>
+        <div class="val"><input type="date" id="prepStartInput"></div>
+      </div>
+      <div class="settings-row">
+        <span>Syllabus deadline (finish all new material by)</span>
+        <div class="val"><input type="date" id="syllabusDeadlineInput"></div>
+      </div>
+      <div class="settings-row">
+        <span>Days reserved for pure revision & mocks before exam</span>
+        <div class="val"><input type="number" id="revisionBufferInput" style="width:70px;"></div>
+      </div>
+      <div class="settings-row">
+        <span>Daily study capacity (hrs, for reference)</span>
+        <div class="val"><input type="number" id="capacityInput" style="width:70px;"></div>
+      </div>
+
+      <h2 style="margin-top:26px;">Fixed daily schedule</h2>
+      <div class="settings-row">
+        <span>Morning break start (1.5 hrs, between 12:00–15:00)</span>
+        <div class="val"><input type="time" id="morningBreakInput"></div>
+      </div>
+      <div class="settings-row">
+        <span>Night practice start (3 hrs, between 19:00–23:00)</span>
+        <div class="val"><input type="time" id="nightStudyInput"></div>
+      </div>
+      <div style="margin-top:14px; display:flex; gap:8px;">
+        <button onclick="saveSettings()">Save settings</button>
+        <button class="ghost" onclick="manualRegenerate()">Regenerate schedule from today</button>
+      </div>
+      <p class="empty-note">Regenerating only rewrites today and future dates — past days stay as a record of what was actually planned.</p>
+
+      <h2 style="margin-top:28px;">Reset</h2>
+      <p class="empty-note">This clears all logged hours, checkboxes, the session timer and the schedule on this phone. It cannot be undone.</p>
+      <button class="danger-btn" onclick="resetAll()">Reset all progress</button>
+    </section>
+    <footer class="credit">
+      All data is stored only on this device (localStorage) — nothing is sent anywhere. Chapter hour estimates and the schedule are starting guesses; adjust settings and regenerate anytime. To keep this on your phone: open this file in your mobile browser, then use "Add to Home Screen" (Safari: Share → Add to Home Screen. Chrome: ⋮ menu → Add to Home screen).
+    </footer>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="tabbar">
+  <button class="tab active" data-view="dashboard" onclick="showView('dashboard')">
+    <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M3 12l9-9 9 9M5 10v10h14V10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Dashboard
+  </button>
+  <button class="tab" data-view="subjects" onclick="showView('subjects')">
+    <svg class="ico" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6" stroke="currentColor" stroke-width="1.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6" stroke="currentColor" stroke-width="1.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.6" stroke="currentColor" stroke-width="1.6" transform="rotate(120 12 12)"/></svg>
+    Subjects
+  </button>
+  <button class="tab" data-view="schedule" onclick="showView('schedule')">
+    <svg class="ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="16" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3 9.5h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    Schedule
+  </button>
+  <button class="tab" data-view="settings" onclick="showView('settings')">
+    <svg class="ico" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.3"/></svg>
+    Settings
+  </button>
+</nav>
+
+<script>
+/* ===========================================================
+   DATA
+=========================================================== */
+const SUBJECTS = {
+  phy:  {name:"Physics",   color:"phy"},
+  chem: {name:"Chemistry", color:"chem"},
+  math: {name:"Maths",     color:"math"}
+};
+
+const CHAPTERS = [
+  {id:"p1",  subject:"phy", name:"Electric Charges and Fields", est:9},
+  {id:"p2",  subject:"phy", name:"Electrostatic Potential and Capacitance", est:8},
+  {id:"p3",  subject:"phy", name:"Current Electricity", est:8},
+  {id:"p4",  subject:"phy", name:"Moving Charges and Magnetism", est:9},
+  {id:"p5",  subject:"phy", name:"Magnetism and Matter", est:6},
+  {id:"p6",  subject:"phy", name:"Electromagnetic Induction", est:7},
+  {id:"p7",  subject:"phy", name:"Alternating Current", est:7},
+  {id:"p8",  subject:"phy", name:"Electromagnetic Waves", est:4},
+  {id:"p9",  subject:"phy", name:"Ray Optics and Optical Instruments", est:9},
+  {id:"p10", subject:"phy", name:"Wave Optics", est:6},
+  {id:"p11", subject:"phy", name:"Dual Nature of Radiation and Matter", est:6},
+  {id:"p12", subject:"phy", name:"Atoms", est:5},
+  {id:"p13", subject:"phy", name:"Nuclei", est:5},
+  {id:"p14", subject:"phy", name:"Semiconductor Electronics", est:8},
+
+  {id:"c1",  subject:"chem", name:"Solutions", est:6},
+  {id:"c2",  subject:"chem", name:"Electrochemistry", est:7},
+  {id:"c3",  subject:"chem", name:"Chemical Kinetics", est:6},
+  {id:"c4",  subject:"chem", name:"d and f Block Elements", est:6},
+  {id:"c5",  subject:"chem", name:"Coordination Compounds", est:8},
+  {id:"c6",  subject:"chem", name:"Haloalkanes and Haloarenes", est:7},
+  {id:"c7",  subject:"chem", name:"Alcohols, Phenols and Ethers", est:7},
+  {id:"c8",  subject:"chem", name:"Aldehydes, Ketones and Carboxylic Acids", est:8},
+  {id:"c9",  subject:"chem", name:"Amines", est:6},
+  {id:"c10", subject:"chem", name:"Biomolecules", est:5},
+
+  {id:"m1",  subject:"math", name:"Relations and Functions", est:5},
+  {id:"m2",  subject:"math", name:"Inverse Trigonometric Functions", est:5},
+  {id:"m3",  subject:"math", name:"Matrices", est:6},
+  {id:"m4",  subject:"math", name:"Determinants", est:7},
+  {id:"m5",  subject:"math", name:"Continuity and Differentiability", est:9},
+  {id:"m6",  subject:"math", name:"Applications of Derivatives", est:8},
+  {id:"m7",  subject:"math", name:"Integrals", est:10},
+  {id:"m8",  subject:"math", name:"Applications of Integrals", est:6},
+  {id:"m9",  subject:"math", name:"Differential Equations", est:8},
+  {id:"m10", subject:"math", name:"Vector Algebra", est:7},
+  {id:"m11", subject:"math", name:"Three Dimensional Geometry", est:8},
+  {id:"m12", subject:"math", name:"Linear Programming", est:4},
+  {id:"m13", subject:"math", name:"Probability", est:7},
+];
+
+const STAGES = [
+  {key:"learn",   label:"Learn"},
+  {key:"practice",label:"Practice"},
+  {key:"rev1",    label:"Revise 1"},
+  {key:"rev2",    label:"Revise 2"},
+];
+
+const STORE_KEY = "cbse_pcm_tracker_v2";
+const CHAPTER_DAYS = 7; // fixed days per chapter before moving on, no matter what
+
+/* ===========================================================
+   STATE
+=========================================================== */
+function defaultState(){
+  const examGuess = new Date(2027,1,15); // Feb 15 2027
+    const progress = {};
+    const syllabusDeadline = '2026-12-15';
+    const prepStartDate = '2026-09-17';
+  CHAPTERS.forEach(c=>{ progress[c.id] = {learn:false, practice:false, rev1:false, rev2:false, hours:0}; });
+  return {
+  examDate: examGuess.toISOString().slice(0,10),
+    revisionBuffer: 45,
+    capacity: 6,
+  syllabusDeadline: syllabusDeadline,
+  prepStartDate: prepStartDate,
+    morningBreakStart: "13:00",
+    nightStudyStart: "19:00",
+    progress,
+    log: {},
+    session: {status:"idle", startedAt:null, accumulated:0, chapterId:null},
+    calendarPlan: {},
+    calendarGeneratedAt: null,
+    syllabusDoneDate: null,
+    firstOpen: new Date().toISOString().slice(0,10)
+  };
+}
+let state = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    const def = defaultState();
+    if(!raw) return def;
+    const parsed = JSON.parse(raw);
+    CHAPTERS.forEach(c=>{ if(!parsed.progress || !parsed.progress[c.id]) { parsed.progress = parsed.progress||{}; parsed.progress[c.id] = def.progress[c.id]; } });
+    if(!parsed.session) parsed.session = def.session;
+    if(!parsed.calendarPlan) parsed.calendarPlan = {};
+    return Object.assign(def, parsed);
+  }catch(e){
+    console.error("Load failed, using defaults", e);
+    return defaultState();
+  }
+}
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+/* ===========================================================
+   HELPERS
+=========================================================== */
+function chapterStagePct(c){ const p = state.progress[c.id]; return STAGES.filter(s=>p[s.key]).length / STAGES.length; }
+function subjectChapters(sub){ return CHAPTERS.filter(c=>c.subject===sub); }
+function subjectProgressPct(sub){ const chs = subjectChapters(sub); if(!chs.length) return 0; return chs.reduce((a,c)=>a+chapterStagePct(c),0)/chs.length; }
+function isChapterFullyDone(id){ return STAGES.every(s=>state.progress[id][s.key]); }
+function totalEstHours(){ return CHAPTERS.reduce((a,c)=>a+c.est,0); }
+function totalHoursLogged(){ return CHAPTERS.reduce((a,c)=>a+(state.progress[c.id].hours||0),0); }
+function daysBetween(a,b){ return Math.round((b-a)/86400000); }
+function fmtDate(dstr){ if(!dstr) return '—'; const d = new Date(dstr+"T00:00:00"); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+function fmtDateShort(dstr){ const d = new Date(dstr+"T00:00:00"); return d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'}); }
+function todayStr(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function minToTime(m){ const h=Math.floor(m/60), mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+function fmtHM(minTotal){
+  const h = Math.floor(minTotal/60), m = minTotal%60;
+  if(h && m) return `${h}h ${m}m`;
+  if(h) return `${h}h`;
+  return `${m}m`;
+}
+
+/* ===========================================================
+   HEADER (countdown + pace)
+=========================================================== */
+function renderHeader(){
+  document.getElementById('todayDate').textContent =
+    new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+
+  const exam = new Date(state.examDate+"T00:00:00");
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysLeft = Math.max(0, daysBetween(today, exam));
+  document.getElementById('daysLeftNum').textContent = daysLeft;
+  document.getElementById('heroSub').textContent =
+    `First paper on ${fmtDate(state.examDate)}. Physics, Chemistry and Maths, tracked in one place.`;
+
+  const syllabusDeadline = new Date(exam);
+  syllabusDeadline.setDate(syllabusDeadline.getDate() - state.revisionBuffer);
+  const daysToDeadline = daysBetween(today, syllabusDeadline);
+  const hrsLeft = Math.max(0, totalEstHours() - totalHoursLogged());
+  const paceEl = document.getElementById('paceCard');
+
+  if(daysLeft<=0){
+    paceEl.innerHTML = `<b>Exam week is here.</b> Trust your revision — light review and rest, not new material.`;
+  } else if(daysToDeadline<=0){
+    paceEl.innerHTML = `<b class="pace-behind">Revision mode.</b> Your syllabus buffer has started — prioritise revision and mock papers over new chapters.`;
+  } else {
+    const req = (hrsLeft/daysToDeadline);
+    const onTrack = req <= state.capacity + 0.4;
+    paceEl.innerHTML = `You need about <b class="${onTrack?'pace-on':'pace-behind'}">${req.toFixed(1)} hrs/day</b> on new syllabus to finish by
+      <b>${fmtDate(syllabusDeadline.toISOString().slice(0,10))}</b>, leaving ${state.revisionBuffer} days for revision & mocks.
+      ${onTrack ? " That's within your stated capacity." : " That's above your stated daily capacity — consider raising hours or trimming the buffer in Settings."}`;
+  }
+}
+
+/* ===========================================================
+   SESSION TIMER
+=========================================================== */
+let tickHandle = null;
+let wakeLock = null;
+
+function renderSessionSelect(){
+  const sel = document.getElementById('sessionChapterSelect');
+  const current = sel.value;
+  sel.innerHTML = `<option value="">General study (no specific chapter)</option>` + CHAPTERS.map(c=>{
+    const done = isChapterFullyDone(c.id);
+    return `<option value="${c.id}" ${done?'data-done="1"':''}>${SUBJECTS[c.subject].name} · ${c.name}${done?' ✓':''}</option>`;
+  }).join('');
+  if(state.session.chapterId) sel.value = state.session.chapterId;
+  else if(current) sel.value = current;
+  sel.disabled = state.session.status !== 'idle';
+}
+
+function sessionElapsedSeconds(){
+  let s = state.session.accumulated || 0;
+  if(state.session.status === 'running' && state.session.startedAt){
+    s += (Date.now() - state.session.startedAt)/1000;
+  }
+  return Math.max(0, s);
+}
+
+function renderSessionTimer(){
+  const secs = Math.floor(sessionElapsedSeconds());
+  const h = String(Math.floor(secs/3600)).padStart(2,'0');
+  const m = String(Math.floor((secs%3600)/60)).padStart(2,'0');
+  const s = String(secs%60).padStart(2,'0');
+  document.getElementById('scTimerDisplay').textContent = `${h}:${m}:${s}`;
+
+  const statusEl = document.getElementById('scStatus');
+  statusEl.className = 'sc-status';
+  if(state.session.status==='running'){ statusEl.textContent='live — studying'; statusEl.classList.add('live'); }
+  else if(state.session.status==='paused'){ statusEl.textContent='paused'; statusEl.classList.add('paused'); }
+  else { statusEl.textContent='idle'; }
+
+  const btnWrap = document.getElementById('scBtns');
+  if(state.session.status==='idle'){
+    btnWrap.innerHTML = `<button class="sc-btn-start" onclick="startSession()">Start</button>`;
+  } else if(state.session.status==='running'){
+    btnWrap.innerHTML = `<button class="sc-btn-pause" onclick="pauseSession()">Pause</button><button class="sc-btn-stop" onclick="stopSession()">Stop & log</button>`;
+  } else {
+    btnWrap.innerHTML = `<button class="sc-btn-resume" onclick="resumeSession()">Resume</button><button class="sc-btn-stop" onclick="stopSession()">Stop & log</button>`;
+  }
+  renderSessionSelect();
+}
+
+function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator){
+      navigator.wakeLock.request('screen').then(wl=>{ wakeLock = wl; }).catch(()=>{});
+    }
+  }catch(e){}
+}
+function releaseWakeLock(){
+  try{ if(wakeLock){ wakeLock.release(); wakeLock = null; } }catch(e){}
+}
+
+function startSession(){
+  const chId = document.getElementById('sessionChapterSelect').value || null;
+  state.session = {status:'running', startedAt: Date.now(), accumulated: 0, chapterId: chId};
+  save();
+  startTicking();
+  requestWakeLock();
+  renderSessionTimer();
+}
+function pauseSession(){
+  state.session.accumulated = sessionElapsedSeconds();
+  state.session.status = 'paused';
+  state.session.startedAt = null;
+  save();
+  stopTicking();
+  releaseWakeLock();
+  renderSessionTimer();
+}
+function resumeSession(){
+  state.session.status = 'running';
+  state.session.startedAt = Date.now();
+  save();
+  startTicking();
+  requestWakeLock();
+  renderSessionTimer();
+}
+function stopSession(){
+  const totalSecs = sessionElapsedSeconds();
+  const hrs = totalSecs/3600;
+  if(hrs > 0.01){
+    const chId = state.session.chapterId;
+    if(chId){
+      state.progress[chId].hours = (state.progress[chId].hours||0) + hrs;
+    }
+    const key = todayStr();
+    state.log[key] = (state.log[key]||0) + hrs;
+  }
+  state.session = {status:'idle', startedAt:null, accumulated:0, chapterId:null};
+  save();
+  stopTicking();
+  releaseWakeLock();
+  renderAll();
+}
+function startTicking(){
+  stopTicking();
+  tickHandle = setInterval(renderSessionTimer, 1000);
+}
+function stopTicking(){
+  if(tickHandle){ clearInterval(tickHandle); tickHandle = null; }
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible'){
+    renderSessionTimer();
+    if(state.session.status==='running') startTicking();
+  }
+});
+window.addEventListener('pageshow', ()=>{ renderSessionTimer(); if(state.session.status==='running') startTicking(); });
+
+function setSessionChapter(chapterId){
+  if(state.session.status !== 'idle'){
+    alert("Finish or stop the current session first, then pick the next chapter.");
+    return;
+  }
+  document.getElementById('sessionChapterSelect').value = chapterId;
+  state.session.chapterId = chapterId;
+  const card = document.getElementById('sessionCard');
+  card.classList.add('pulse');
+  setTimeout(()=>card.classList.remove('pulse'), 900);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ===========================================================
+   DASHBOARD
+=========================================================== */
+function renderDashboard(){
+  const bars = document.getElementById('progressBars');
+  bars.innerHTML = Object.keys(SUBJECTS).map(sub=>{
+    const pct = Math.round(subjectProgressPct(sub)*100);
+    const s = SUBJECTS[sub];
+    return `<div class="prog-row">
+      <div class="prog-head"><span>${s.name}</span><span class="num">${pct}%</span></div>
+      <div class="prog-track"><div class="prog-fill ${s.color}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('statHoursLogged').textContent = totalHoursLogged().toFixed(1);
+  document.getElementById('statHoursLeft').textContent = Math.max(0, totalEstHours()-totalHoursLogged()).toFixed(0);
+  const chaptersDone = CHAPTERS.filter(c=>isChapterFullyDone(c.id)).length;
+  document.getElementById('statChaptersDone').textContent = `${chaptersDone}/${CHAPTERS.length}`;
+  document.getElementById('statStreak').textContent = computeStreak();
+
+  renderUpNext();
+  renderLoggerOptions();
+  renderCharts();
+}
+
+function computeStreak(){
+  let streak = 0;
+  let cursor = new Date();
+  if(!(state.log[todayStr()] > 0)) cursor.setDate(cursor.getDate()-1);
+  while(true){
+    const key = cursor.toISOString().slice(0,10);
+    if(state.log[key] > 0){ streak++; cursor.setDate(cursor.getDate()-1); } else break;
+  }
+  return streak;
+}
+
+function nextIncompleteChapters(n){
+  const order = ["phy","chem","math"];
+  const pointers = {phy:0, chem:0, math:0};
+  const bySub = {phy:subjectChapters("phy"), chem:subjectChapters("chem"), math:subjectChapters("math")};
+  const picks = [];
+  let guard = 0;
+  while(picks.length < n && guard < 500){
+    guard++;
+    let addedAny = false;
+    for(const sub of order){
+      const chs = bySub[sub];
+      while(pointers[sub] < chs.length){
+        const c = chs[pointers[sub]];
+        if(isChapterFullyDone(c.id)){ pointers[sub]++; continue; }
+        picks.push(c); pointers[sub]++; addedAny = true; break;
+      }
+      if(picks.length>=n) break;
+    }
+    if(!addedAny) break;
+  }
+  return picks.slice(0,n);
+}
+
+function renderUpNext(){
+  const list = document.getElementById('upNextList');
+  const picks = nextIncompleteChapters(3);
+  if(picks.length===0){
+    list.innerHTML = `<p class="empty-note">Every chapter is fully checked off. Time for full mock papers.</p>`;
+    return;
+  }
+  list.innerHTML = picks.map(c=>{
+    const p = state.progress[c.id];
+    const doneStages = STAGES.filter(s=>p[s.key]).map(s=>s.label);
+    const stageTxt = doneStages.length ? `Done: ${doneStages.join(', ')}` : 'Not started';
+    return `<div class="today-item">
+      <span class="dot ${SUBJECTS[c.subject].color}"></span>
+      <div style="flex:1;">
+        <div class="ti-name">${c.name}</div>
+        <div class="ti-sub">${SUBJECTS[c.subject].name} · ${stageTxt} · ${p.hours.toFixed(1)}/${c.est}h logged</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLoggerOptions(){
+  const sel = document.getElementById('logChapterSelect');
+  const current = sel.value;
+  sel.innerHTML = CHAPTERS.map(c=>{
+    const done = isChapterFullyDone(c.id);
+    return `<option value="${c.id}">${SUBJECTS[c.subject].name} · ${c.name}${done?' ✓':''}</option>`;
+  }).join('');
+  if(current) sel.value = current;
+}
+
+function logHours(){
+  const chId = document.getElementById('logChapterSelect').value;
+  const hrs = parseFloat(document.getElementById('logHoursInput').value);
+  if(!chId || !hrs || hrs<=0){ alert("Pick a chapter and enter hours greater than 0."); return; }
+  state.progress[chId].hours = (state.progress[chId].hours||0) + hrs;
+  const key = todayStr();
+  state.log[key] = (state.log[key]||0) + hrs;
+  document.getElementById('logHoursInput').value = '';
+  save();
+  renderAll();
+}
+
+/* ---- charts (dependency-free SVG) ---- */
+function renderCharts(){
+  renderDailyChart();
+  renderCumulativeChart();
+}
+function lastNDays(n){
+  const out = [];
+  const d = new Date();
+  for(let i=n-1;i>=0;i--){
+    const c = new Date(d); c.setDate(c.getDate()-i);
+    const key = c.toISOString().slice(0,10);
+    out.push({date:key, hours: state.log[key]||0});
+  }
+  return out;
+}
+function renderDailyChart(){
+  const el = document.getElementById('dailyChart');
+  const data = lastNDays(14);
+  const max = Math.max(6, ...data.map(d=>d.hours));
+  const W=480, H=110, padB=16, padT=6, barGap=4;
+  const barW = (W/data.length) - barGap;
+  let bars = '';
+  data.forEach((d,i)=>{
+    const h = (d.hours/max) * (H-padT-padB);
+    const x = i*(barW+barGap);
+    const y = H-padB-h;
+    const isToday = d.date===todayStr();
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${isToday?'var(--margin)':'var(--phy)'}" opacity="${d.hours?1:0.15}"/>`;
+    if(i%2===0){
+      const day = new Date(d.date+"T00:00:00").getDate();
+      bars += `<text x="${(x+barW/2).toFixed(1)}" y="${H-2}" font-size="8" fill="var(--ink-soft)" text-anchor="middle" font-family="IBM Plex Sans">${day}</text>`;
+    }
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${bars}</svg>`;
+}
+function renderCumulativeChart(){
+  const el = document.getElementById('cumulativeChart');
+  const days = Object.keys(state.log).sort();
+  if(days.length===0){ el.innerHTML = `<p class="chart-empty">Log some hours to see your trend build up here.</p>`; return; }
+  let cum = 0;
+  const pts = days.map(d=>{ cum += state.log[d]; return {date:d, cum}; });
+  const W=480, H=110, pad=8;
+  const maxCum = pts[pts.length-1].cum || 1;
+  const stepX = pts.length>1 ? (W-2*pad)/(pts.length-1) : 0;
+  const coords = pts.map((p,i)=>{
+    const x = pad + i*stepX;
+    const y = H-pad - (p.cum/maxCum)*(H-2*pad);
+    return [x,y];
+  });
+  const path = coords.map((c,i)=> (i===0?'M':'L')+c[0].toFixed(1)+','+c[1].toFixed(1)).join(' ');
+  const area = path + ` L${coords[coords.length-1][0].toFixed(1)},${H-pad} L${coords[0][0].toFixed(1)},${H-pad} Z`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">
+    <path d="${area}" fill="var(--phy-soft)"/>
+    <path d="${path}" fill="none" stroke="var(--phy)" stroke-width="2"/>
+  </svg>`;
+}
+
+/* ===========================================================
+   SUBJECTS (single tab, slider of 3 panels)
+=========================================================== */
+function renderSubjectTabs(){
+  const bar = document.getElementById('subjectTabBar');
+  bar.innerHTML = Object.keys(SUBJECTS).map(sub=>{
+    const s = SUBJECTS[sub];
+    return `<div class="chip" id="chip-${sub}" onclick="scrollToSubject('${sub}')">${s.name}</div>`;
+  }).join('');
+  updateActiveChipFromScroll();
+}
+function scrollToSubject(sub){
+  document.getElementById('panel-'+sub).scrollIntoView({behavior:'smooth', inline:'start', block:'nearest'});
+}
+function updateActiveChipFromScroll(){
+  const track = document.getElementById('subjectSlider');
+  if(!track) return;
+  const idx = Math.round(track.scrollLeft / track.clientWidth);
+  const subs = Object.keys(SUBJECTS);
+  const active = subs[Math.min(idx, subs.length-1)] || 'phy';
+  subs.forEach(s=>{
+    const chip = document.getElementById('chip-'+s);
+    if(!chip) return;
+    chip.classList.toggle('active', s===active);
+    chip.classList.toggle(SUBJECTS[s].color, s===active);
+  });
+}
+function toggleStage(chId, stageKey){
+  state.progress[chId][stageKey] = !state.progress[chId][stageKey];
+  save();
+  renderAll();
+}
+function updateChapterHours(chId, val){
+  const h = parseFloat(val);
+  state.progress[chId].hours = isNaN(h) ? 0 : h;
+  save();
+  renderDashboard();
+}
+function renderSubjectPanels(){
+  Object.keys(SUBJECTS).forEach(sub=>{
+    const wrap = document.getElementById('panel-'+sub);
+    const color = SUBJECTS[sub].color;
+    const chs = subjectChapters(sub);
+    wrap.innerHTML = chs.map(c=>{
+      const p = state.progress[c.id];
+      return `<div class="chapter">
+        <div class="ch-head">
+          <span class="ch-name">${c.name}</span>
+          <span class="ch-hours">${c.est}h est.</span>
+        </div>
+        <div class="ch-stages">
+          ${STAGES.map(s=>`<span class="stage-btn ${p[s.key]?'on '+color:''}" onclick="toggleStage('${c.id}','${s.key}')">${s.label}</span>`).join('')}
+        </div>
+        <div class="ch-log">
+          <span>Hours logged:</span>
+          <input type="number" min="0" step="0.25" value="${p.hours||0}" onchange="updateChapterHours('${c.id}', this.value)">
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+/* ===========================================================
+   CALENDAR PLAN GENERATION (SPEC: all-three-subjects-every-day)
+=========================================================== */
+function buildStudyBlocks(activeSubs, segStartMin, segEndMin, blockType, dayInfoBySubject){
+  const n = activeSubs.length;
+  if(n===0 || segEndMin<=segStartMin) return [];
+  const totalMin = segEndMin - segStartMin;
+  const share = Math.floor(totalMin / n);
+  let cur = segStartMin;
+  const blocks = [];
+  activeSubs.forEach((sub, i)=>{
+    const end = (i===n-1) ? segEndMin : cur + share;
+    const info = dayInfoBySubject[sub];
+    blocks.push({
+      start: minToTime(cur), end: minToTime(end), type: blockType, subject: sub,
+      chapterId: info.chapterId, chapterName: info.chapterName,
+      dayOfChapter: info.dayOfChapter, totalDaysForChapter: info.totalDaysForChapter
+    });
+    cur = end;
+  });
+  return blocks;
+}
+
+function daySkeletonBlocks(activeSubs, studyDayInfo, practiceDayInfo){
+  const blocks = [];
+  blocks.push({start: '10:00', end: '11:00', type: 'doubts', label: 'Doubt discussion'});
+  const breakStartMin = timeToMin(state.morningBreakStart);
+  const breakEndMin = breakStartMin + 90;
+  blocks.push(...buildStudyBlocks(activeSubs, timeToMin('11:00'), breakStartMin, 'study', studyDayInfo));
+  blocks.push({start: minToTime(breakStartMin), end: minToTime(breakEndMin), type: 'break', label: 'Break'});
+  blocks.push(...buildStudyBlocks(activeSubs, breakEndMin, timeToMin('16:00'), 'study', studyDayInfo));
+  const nightStartMin = timeToMin(state.nightStudyStart);
+  blocks.push(...buildStudyBlocks(activeSubs, nightStartMin, nightStartMin + 180, 'practice', practiceDayInfo));
+  blocks.sort((a,b)=> timeToMin(a.start) - timeToMin(b.start));
+  return blocks;
+}
+
+function generateCalendarPlan(){
+  // Anchor math to prepStartDate per spec
+  const prep = state.prepStartDate || todayStr();
+  const deadline = state.syllabusDeadline;
+  const start = new Date(prep + 'T00:00:00');
+  const end = new Date(deadline + 'T00:00:00');
+  // totalDays: inclusive start, exclusive deadline
+  const totalDays = Math.max(0, Math.round((end - start) / 86400000));
+  const plan = {};
+  if(totalDays <= 0) return {plan, syllabusDoneDate: deadline};
+
+  // Per-subject: gather not-yet-done chapters
+  const perSubCh = {phy: subjectChapters('phy').filter(c=>!isChapterFullyDone(c.id)), chem: subjectChapters('chem').filter(c=>!isChapterFullyDone(c.id)), math: subjectChapters('math').filter(c=>!isChapterFullyDone(c.id))};
+
+  // allocate days per chapter per subject
+  const perSubAlloc = {phy:[], chem:[], math:[]};
+  ['phy','chem','math'].forEach(s=>{
+    const chs = perSubCh[s];
+    if(!chs.length) { perSubAlloc[s]=[]; return; }
+    const subjectTotalEst = chs.reduce((a,b)=>a+b.est,0) || 1;
+    let alloc = chs.map(c=>({id:c.id,name:c.name,est:c.est,days: Math.max(7, Math.round(c.est / subjectTotalEst * totalDays))}));
+    // reconcile to match exactly totalDays
+    let sum = alloc.reduce((a,b)=>a+b.days,0);
+    if(sum > totalDays){
+      let over = sum - totalDays;
+      // reduce from largest est first, not below 6
+      alloc.sort((a,b)=>b.est - a.est);
+      for(let i=0;i<alloc.length && over>0;i++){ const can = alloc[i].days - 7; if(can>0){ const take = Math.min(can, over); alloc[i].days -= take; over -= take; } }
+      if(over>0){ // as last resort reduce further allowing >=1
+        alloc.sort((a,b)=>a.est - b.est);
+        for(let i=0;i<alloc.length && over>0;i++){ const can = alloc[i].days - 1; if(can>0){ const take = Math.min(can, over); alloc[i].days -= take; over -= take; } }
+      }
+    } else if(sum < totalDays){
+      let need = totalDays - sum;
+      // add to largest est first
+      alloc.sort((a,b)=>b.est - a.est);
+      for(let i=0;i<alloc.length && need>0;i++){ alloc[i].days += 1; need--; }
+      let idx=0; while(need>0 && alloc.length){ alloc[idx%alloc.length].days +=1; need--; idx++; }
+    }
+    // restore original order
+    perSubAlloc[s] = chs.map(c=>{ const a = alloc.find(x=>x.id===c.id); return {id:c.id,name:c.name,days:a? a.days:6}; });
+  });
+
+  // expand per-subject queues with dayOfChapter info
+  const subjQueues = {phy:[],chem:[],math:[]};
+  ['phy','chem','math'].forEach(s=>{
+    perSubAlloc[s].forEach(ch=>{ for(let i=1;i<=ch.days;i++) subjQueues[s].push({chapterId:ch.id,chapterName:ch.name,dayOfChapter:i,totalDaysForChapter:ch.days}); });
+    // if queues empty, ensure at least one placeholder from last chapter to avoid empty days
+    if(subjQueues[s].length===0){ const all = subjectChapters(s); const last = all[all.length-1]||null; if(last) subjQueues[s].push({chapterId:last.id,chapterName:last.name,dayOfChapter:1,totalDaysForChapter:1}); }
+  });
+
+  // build date list from prep (inclusive) to day before deadline (exclusive)
+  const dates = []; let d = new Date(start);
+  for(let i=0;i<totalDays;i++){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+
+  dates.forEach(dateStr=>{
+    // for each subject get today's chapter info
+    const dayInfo = {};
+    const activeSubs = [];
+    ['phy','chem','math'].forEach(s=>{
+      const q = subjQueues[s];
+      if(q && q.length>0){
+        const item = q.shift();
+        dayInfo[s] = {chapterId:item.chapterId, chapterName:item.chapterName, dayOfChapter:item.dayOfChapter, totalDaysForChapter:item.totalDaysForChapter};
+        activeSubs.push(s);
+      } else {
+        // extend last chapter
+        const all = subjectChapters(s); const last = all[all.length-1] || null;
+        if(last) { dayInfo[s] = {chapterId:last.id, chapterName:last.name, dayOfChapter:1, totalDaysForChapter:1}; activeSubs.push(s); }
+      }
+    });
+    // build blocks splitting morning and night across activeSubs
+    plan[dateStr] = daySkeletonBlocks(activeSubs, dayInfo, dayInfo);
+  });
+
+  const syllabusDoneDate = state.syllabusDeadline || null;
+  return {plan, syllabusDoneDate};
+}
+
+function regenerateCalendar(fromDateStr){
+  // default from = later of prepStartDate and today
+  const today = todayStr();
+  const prep = state.prepStartDate || today;
+  const from = fromDateStr || (new Date(prep) > new Date(today) ? prep : today);
+  const {plan, syllabusDoneDate} = generateCalendarPlan();
+  const merged = Object.assign({}, state.calendarPlan);
+  // delete and overwrite dates >= from
+  Object.keys(merged).forEach(k=>{ if(k >= from) delete merged[k]; });
+  Object.keys(plan).forEach(k=>{ if(k >= from) merged[k] = plan[k]; });
+  state.calendarPlan = merged;
+  if(syllabusDoneDate) state.syllabusDoneDate = syllabusDoneDate;
+  state.calendarGeneratedAt = Date.now(); save();
+}
+
+function manualRegenerate(){ regenerateCalendar(); renderAll(); alert('Schedule regenerated from prep start or today onward.'); }
+
+// small deterministic hash for date to vary revision picks when needed
+function hashCode(str){ let h=0; for(let i=0;i<str.length;i++){ h = ((h<<5)-h) + str.charCodeAt(i); h |= 0; } return Math.abs(h); }
+
+/* ===========================================================
+   SCHEDULE VIEW
+=========================================================== */
+let selectedScheduleDate = null;
+function renderDateStrip(){
+  const strip = document.getElementById('dateStrip');
+  const dates = Object.keys(state.calendarPlan).sort();
+  if(dates.length===0){ strip.innerHTML = ''; return; }
+  const t = todayStr();
+  strip.innerHTML = dates.map(d=>{
+    const dt = new Date(d+"T00:00:00");
+    const dow = dt.toLocaleDateString('en-IN',{weekday:'short'});
+    const isToday = d===t;
+    const isSel = d===selectedScheduleDate;
+    return `<div class="date-chip ${isToday?'today':''} ${isSel?'selected':''}" data-date="${d}" onclick="selectScheduleDate('${d}')">
+      <div class="dow">${dow}</div><div class="dnum">${dt.getDate()}</div>
+    </div>`;
+  }).join('');
+}
+function selectScheduleDate(d){
+  selectedScheduleDate = d;
+  renderDateStrip();
+  renderScheduleBlocks();
+  const chip = document.querySelector(`.date-chip[data-date="${d}"]`);
+  if(chip) chip.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+}
+function renderScheduleStat(){
+  const el = document.getElementById('schedStat');
+  el.innerHTML = `Full new syllabus done by <b>${fmtDate(state.syllabusDoneDate)}</b> · Exam on <b>${fmtDate(state.examDate)}</b>`;
+}
+function blockDotClass(b){
+  if(b.subject) return 'dot '+SUBJECTS[b.subject].color;
+  return 'dot neutral';
+}
+function renderScheduleBlocks(){
+  const t = todayStr();
+  if(!selectedScheduleDate) selectedScheduleDate = t;
+  const isToday = selectedScheduleDate === t;
+  document.getElementById('schedDayTitle').textContent = isToday ? "Today · "+fmtDateShort(selectedScheduleDate) : fmtDateShort(selectedScheduleDate);
+  const actualEl = document.getElementById('schedActual');
+  const actualHrs = state.log[selectedScheduleDate];
+  actualEl.textContent = (!isToday && actualHrs) ? `Actually logged: ${actualHrs.toFixed(1)}h` : '';
+
+  const blocks = state.calendarPlan[selectedScheduleDate];
+  const wrap = document.getElementById('schedBlocks');
+  if(!blocks){
+    wrap.innerHTML = `<p class="empty-note" style="padding:0 18px 20px 4px;">No plan generated for this date yet. Go to Settings → Regenerate schedule.</p>`;
+    return;
+  }
+  wrap.innerHTML = blocks.map(b=>{
+    const label = b.label || b.chapterName;
+    const subName = b.subject ? SUBJECTS[b.subject].name : '';
+    let tag = '';
+    if(b.type==='study') tag = `Day ${b.dayOfChapter} of ${b.totalDaysForChapter}`;
+    else if(b.type==='practice') tag = `Practice · Day ${b.dayOfChapter} of ${b.totalDaysForChapter}`;
+    else if(b.type==='revision') tag = b.stageLabel || 'Revision';
+    const canLog = isToday && b.chapterId;
+    return `<div class="block-row type-${b.type} ${isToday?'':'readonly'}">
+      <div class="block-time">${b.start}<br>${b.end}</div>
+      <div class="block-body">
+        <div class="block-label-row">
+          <span class="${blockDotClass(b)}"></span>
+          <span class="block-name">${label}</span>
+        </div>
+        <div class="block-sub">${[subName, tag].filter(Boolean).join(' · ')}</div>
+        ${canLog ? `<button class="ghost log-tap" onclick="setSessionChapter('${b.chapterId}')">Start timer for this</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ===========================================================
+   VIEW SWITCHING
+=========================================================== */
+function showView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('nav .tab').forEach(t=>t.classList.remove('active'));
+  const btn = document.querySelector(`nav .tab[data-view="${view}"]`);
+  if(btn) btn.classList.add('active');
+
+  if(view==='subjects'){ renderSubjectTabs(); renderSubjectPanels(); }
+  if(view==='schedule'){
+    if(!selectedScheduleDate) selectedScheduleDate = todayStr();
+    renderScheduleStat(); renderDateStrip(); renderScheduleBlocks();
+    setTimeout(()=>{
+      const chip = document.querySelector('.date-chip.today');
+      if(chip) chip.scrollIntoView({inline:'center', block:'nearest'});
+    }, 50);
+  }
+  if(view==='settings') renderSettings();
+  window.scrollTo(0,0);
+}
+
+/* ===========================================================
+   SETTINGS
+=========================================================== */
+function renderSettings(){
+  document.getElementById('examDateInput').value = state.examDate;
+  document.getElementById('prepStartInput').value = state.prepStartDate || '';
+  document.getElementById('syllabusDeadlineInput').value = state.syllabusDeadline || '';
+  document.getElementById('revisionBufferInput').value = state.revisionBuffer;
+  document.getElementById('capacityInput').value = state.capacity;
+  document.getElementById('morningBreakInput').value = state.morningBreakStart;
+  document.getElementById('nightStudyInput').value = state.nightStudyStart;
+}
+function saveSettings(){
+  const d = document.getElementById('examDateInput').value;
+  const sd = document.getElementById('syllabusDeadlineInput').value;
+  const ps = document.getElementById('prepStartInput').value;
+  const b = parseInt(document.getElementById('revisionBufferInput').value,10);
+  const c = parseFloat(document.getElementById('capacityInput').value);
+  const mb = document.getElementById('morningBreakInput').value;
+  const ns = document.getElementById('nightStudyInput').value;
+  if(d) state.examDate = d;
+  if(sd) state.syllabusDeadline = sd;
+  if(ps) state.prepStartDate = ps;
+  if(!isNaN(b) && b>=0) state.revisionBuffer = b;
+  if(!isNaN(c) && c>0) state.capacity = c;
+  if(mb) state.morningBreakStart = mb;
+  if(ns) state.nightStudyStart = ns;
+  save();
+  regenerateCalendar(todayStr());
+  renderAll();
+  alert("Saved and schedule refreshed.");
+}
+function resetAll(){
+  if(confirm("This will erase all logged hours, checkboxes, the timer and the schedule on this device. Continue?")){
+    localStorage.removeItem(STORE_KEY);
+    state = defaultState();
+    regenerateCalendar(todayStr());
+    save();
+    selectedScheduleDate = null;
+    renderAll();
+    showView('dashboard');
+  }
+}
+
+/* ===========================================================
+   INIT
+=========================================================== */
+function renderAll(){
+  renderHeader();
+  renderSessionTimer();
+  renderDashboard();
+  if(document.getElementById('view-subjects').classList.contains('active')) renderSubjectPanels();
+  if(document.getElementById('view-schedule').classList.contains('active')){ renderScheduleStat(); renderDateStrip(); renderScheduleBlocks(); }
+}
+
+// Always regenerate schedule on load to apply latest algorithm/settings
+regenerateCalendar();
+renderAll();
+renderSubjectTabs();
+document.getElementById('subjectSlider').addEventListener('scroll', ()=>{
+  clearTimeout(window.__scrollT);
+  window.__scrollT = setTimeout(updateActiveChipFromScroll, 80);
+});
+if(state.session.status==='running') startTicking();
+</script>
+</body>
+</html>
